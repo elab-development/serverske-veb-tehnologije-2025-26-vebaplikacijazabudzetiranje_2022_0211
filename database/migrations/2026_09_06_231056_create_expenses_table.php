@@ -17,11 +17,9 @@ return new class extends Migration
             $table->foreignId('group_id')
                 ->constrained()
                 ->cascadeOnDelete();
-
             $table->foreignId('category_id')
                 ->constrained()
                 ->restrictOnDelete();
-
             $table->foreignId('paid_by')
                 ->constrained('users')
                 ->cascadeOnDelete();
