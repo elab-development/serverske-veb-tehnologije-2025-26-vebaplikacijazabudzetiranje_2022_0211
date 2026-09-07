@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Expense;
+use App\Models\ExpenseShare;
 use Illuminate\Database\Seeder;
-use \App\Models\ExpenseShare;
 
 class ExpenseShareSeeder extends Seeder
 {
@@ -13,6 +13,41 @@ class ExpenseShareSeeder extends Seeder
      */
     public function run(): void
     {
-        ExpenseShare::factory(30)->create();
+        $expenses = Expense::with('group.users')->get();
+
+        foreach ($expenses as $expense) {
+
+            $members = $expense->group->users;
+
+            if ($members->isEmpty()) {
+                continue;
+            }
+
+            $memberCount = $members->count();
+
+            $shareAmount = round(
+                $expense->amount / $memberCount,
+                2
+            );
+
+            $remainingAmount = $expense->amount;
+
+            foreach ($members as $index => $member) {
+
+                if ($index === $memberCount - 1) {
+                    $amountOwed = $remainingAmount;
+                } else {
+                    $amountOwed = $shareAmount;
+                    $remainingAmount -= $shareAmount;
+                }
+
+                ExpenseShare::create([
+                    'expense_id' => $expense->id,
+                    'user_id' => $member->id,
+                    'amount_owed' => $amountOwed,
+                    'is_paid' => $member->id === $expense->paid_by,
+                ]);
+            }
+        }
     }
 }

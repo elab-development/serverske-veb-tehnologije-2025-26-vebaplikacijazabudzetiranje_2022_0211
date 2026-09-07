@@ -16,13 +16,28 @@ class ExpenseResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'group_id' => $this->group_id,
-            'category_id' => $this->category_id,
-            'paid_by' => $this->paid_by,
             'amount' => $this->amount,
             'description' => $this->description,
             'payment_date' => $this->payment_date,
+
+            'group' => new GroupResource(
+                $this->whenLoaded('group')
+            ),
+
+            'category' => new CategoryResource(
+                $this->whenLoaded('category')
+            ),
+
+            'payer' => new UserResource(
+                $this->whenLoaded('payer')
+            ),
+
+            'shares' => ExpenseShareResource::collection(
+                $this->whenLoaded('shares')
+            ),
+
             'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
         ];
     }
 }

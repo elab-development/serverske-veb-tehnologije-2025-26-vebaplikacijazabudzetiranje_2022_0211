@@ -2,9 +2,10 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Category;
+use App\Models\Expense;
+use App\Models\Group;
 use Illuminate\Database\Seeder;
-use \App\Models\Expense;
 
 class ExpenseSeeder extends Seeder
 {
@@ -13,6 +14,20 @@ class ExpenseSeeder extends Seeder
      */
     public function run(): void
     {
-        Expense::factory(20)->create();
+        for ($i = 0; $i < 20; $i++) {
+
+            $group = Group::with('users')->inRandomOrder()->first();
+
+            $payer = $group->users->random();
+
+            Expense::create([
+                'group_id' => $group->id,
+                'category_id' => Category::inRandomOrder()->value('id'),
+                'paid_by' => $payer->id,
+                'amount' => fake()->randomFloat(2, 500, 20000),
+                'description' => fake()->sentence(),
+                'payment_date' => fake()->date(),
+            ]);
+        }
     }
 }

@@ -5,6 +5,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\GroupController;
+use App\Http\Controllers\Api\ExpenseController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -43,4 +44,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/groups/{group}/members', [GroupController::class, 'members']);
     Route::post('/groups/{group}/members', [GroupController::class, 'addMember']);
     Route::delete('/groups/{group}/members/{user}', [GroupController::class, 'removeMember']);
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::apiResource('expenses', ExpenseController::class);
 });
