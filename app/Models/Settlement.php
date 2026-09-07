@@ -13,4 +13,19 @@ class Settlement extends Model
         'amount',
         'settled_at',
     ];
+
+    public function group()
+    {
+        return $this->belongsTo(Group::class);
+    }
+
+    public function fromUser()
+    {
+        return $this->belongsTo(User::class, 'from_user_id');
+    }
+
+    public function toUser()
+    {
+        return $this->belongsTo(User::class, 'to_user_id');
+    }
 }

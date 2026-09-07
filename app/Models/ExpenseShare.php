@@ -12,4 +12,14 @@ class ExpenseShare extends Model
         'amount_owed',
         'is_paid',
     ];
+
+    public function expense()
+    {
+        return $this->belongsTo(Expense::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

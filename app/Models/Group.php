@@ -11,4 +11,24 @@ class Group extends Model
         'description',
         'created_by',
     ];
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function users()
+    {
+        return $this->belongsToMany(User::class);
+    }
+
+    public function expenses()
+    {
+        return $this->hasMany(Expense::class);
+    }
+
+    public function settlements()
+    {
+        return $this->hasMany(Settlement::class);
+    }
 }
