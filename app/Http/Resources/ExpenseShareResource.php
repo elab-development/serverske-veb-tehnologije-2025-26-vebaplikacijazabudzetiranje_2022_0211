@@ -14,6 +14,12 @@ class ExpenseShareResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return parent::toArray($request);
+        return [
+            'id' => $this->id,
+            'expense_id' => $this->expense_id,
+            'user_id' => $this->user_id,
+            'amount_owed' => $this->amount_owed,
+            'is_paid' => $this->is_paid,
+        ];
     }
 }

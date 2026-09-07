@@ -14,6 +14,13 @@ class SettlementResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return parent::toArray($request);
+        return [
+            'id' => $this->id,
+            'group_id' => $this->group_id,
+            'from_user_id' => $this->from_user_id,
+            'to_user_id' => $this->to_user_id,
+            'amount' => $this->amount,
+            'settled_at' => $this->settled_at,
+        ];
     }
 }
