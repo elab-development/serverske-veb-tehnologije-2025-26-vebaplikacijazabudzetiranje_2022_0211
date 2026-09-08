@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\GroupController;
 use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\SettlementController;
 use App\Http\Controllers\Api\PasswordResetController;
+use App\Http\Controllers\Api\ExchangeRateController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -72,4 +73,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/settlements', [SettlementController::class, 'store']);
     Route::get('/settlements/{settlement}', [SettlementController::class, 'show']);
     Route::delete('/settlements/{settlement}', [SettlementController::class, 'destroy']);
+});
+
+
+Route::get('/exchange-rate', [ExchangeRateController::class, 'getRate']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/expenses/{expense}/convert', [ExchangeRateController::class, 'convertExpense']);
 });
