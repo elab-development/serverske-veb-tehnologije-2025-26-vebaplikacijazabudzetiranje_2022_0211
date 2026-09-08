@@ -167,4 +167,50 @@ class GroupController extends Controller
             'message' => 'Korisnik je uspešno uklonjen iz grupe.'
         ]);
     }
+
+    public function balances(Group $group)
+    {
+        $group->load([
+            'users',
+            'expenses.shares',
+        ]);
+
+        $balances = [];
+
+        foreach ($group->users as $user) {
+            $paid = $group->expenses
+                ->where('paid_by', $user->id)
+                ->sum('amount');
+
+            $owed = 0;
+
+            foreach ($group->expenses as $expense) {
+                $share = $expense->shares
+                    ->firstWhere('user_id', $user->id);
+
+                if ($share) {
+                    $owed += $share->amount_owed;
+                }
+            }
+
+            $balance = round($paid - $owed, 2);
+
+            $balances[] = [
+                'user_id' => $user->id,
+                'name' => $user->name,
+                'paid' => round($paid, 2),
+                'owed' => round($owed, 2),
+                'balance' => $balance,
+                'status' => $balance > 0
+                    ? 'potražuje'
+                    : ($balance < 0 ? 'duguje' : 'izmiren'),
+            ];
+        }
+
+        return response()->json([
+            'group_id' => $group->id,
+            'group_name' => $group->name,
+            'balances' => $balances,
+        ]);
+    }
 }
