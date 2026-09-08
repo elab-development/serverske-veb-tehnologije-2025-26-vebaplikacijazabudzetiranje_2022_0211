@@ -38,6 +38,10 @@ class ExpenseResource extends JsonResource
 
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
+
+            'receipt_url' => $this->receipt_path
+                ? asset('storage/' . $this->receipt_path)
+                : null,
         ];
     }
 }

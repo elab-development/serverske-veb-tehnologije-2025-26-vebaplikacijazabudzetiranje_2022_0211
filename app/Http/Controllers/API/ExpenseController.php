@@ -7,6 +7,7 @@ use App\Http\Resources\ExpenseResource;
 use App\Models\Expense;
 use Illuminate\Http\Request;
 use \App\Models\Group;
+use Illuminate\Support\Facades\Storage;
 
 class ExpenseController extends Controller
 {
@@ -60,6 +61,7 @@ class ExpenseController extends Controller
             'amount' => 'required|numeric|min:0.01',
             'description' => 'required|string|max:255',
             'payment_date' => 'required|date',
+            'receipt' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
         ]);
 
         $group = Group::findOrFail($validated['group_id']);
@@ -70,6 +72,12 @@ class ExpenseController extends Controller
             ], 403);
         }
 
+        $receiptPath = null;
+
+        if ($request->hasFile('receipt')) {
+            $receiptPath = $request->file('receipt')->store('receipts', 'public');
+        }
+
         $expense = Expense::create([
             'group_id' => $validated['group_id'],
             'category_id' => $validated['category_id'],
@@ -77,6 +85,7 @@ class ExpenseController extends Controller
             'amount' => $validated['amount'],
             'description' => $validated['description'],
             'payment_date' => $validated['payment_date'],
+            'receipt_path' => $receiptPath,
         ]);
 
         $members = $group->users()->get();
@@ -127,11 +136,26 @@ class ExpenseController extends Controller
         }
 
         $validated = $request->validate([
-            'category_id' => 'sometimes|exists:categories,id',
-            'amount' => 'sometimes|numeric|min:0.01',
-            'description' => 'sometimes|string|max:255',
-            'payment_date' => 'sometimes|date',
+            'group_id' => 'sometimes|required|exists:groups,id',
+            'category_id' => 'sometimes|required|exists:categories,id',
+            'amount' => 'sometimes|required|numeric|min:0.01',
+            'description' => 'sometimes|required|string|max:255',
+            'payment_date' => 'sometimes|required|date',
+            'receipt' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
         ]);
+
+        if ($request->hasFile('receipt')) {
+
+            if ($expense->receipt_path) {
+                Storage::disk('public')->delete($expense->receipt_path);
+            }
+
+            $validated['receipt_path'] = $request
+                ->file('receipt')
+                ->store('receipts', 'public');
+        }
+
+        unset($validated['receipt']);
 
         $expense->update($validated);
 
@@ -178,6 +202,10 @@ class ExpenseController extends Controller
             return response()->json([
                 'message' => 'Nemate dozvolu za brisanje ovog troška.'
             ], 403);
+        }
+
+        if ($expense->receipt_path) {
+            Storage::disk('public')->delete($expense->receipt_path);
         }
 
         $expense->delete();

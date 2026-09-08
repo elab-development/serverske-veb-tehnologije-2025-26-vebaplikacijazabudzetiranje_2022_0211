@@ -15,6 +15,7 @@ class Expense extends Model
         'amount',
         'description',
         'payment_date',
+        'receipt_path',
     ];
 
     public function group()
