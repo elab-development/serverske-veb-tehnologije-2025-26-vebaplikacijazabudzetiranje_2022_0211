@@ -7,9 +7,22 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\GroupController;
 use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\SettlementController;
+use App\Http\Controllers\Api\PasswordResetController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+
+Route::post('/forgot-password', [PasswordResetController::class, 'forgotPassword']);
+
+Route::post('/reset-password', [PasswordResetController::class, 'resetPassword']);
+
+Route::get('/reset-password/{token}', function ($token) {
+    return response()->json([
+        'token' => $token,
+        'email' => request('email'),
+        'message' => 'Koristite ovaj token za resetovanje lozinke.'
+    ]);
+})->name('password.reset');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -22,6 +35,7 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
         ]);
     });
 });
+
 /*
 Route::get('/user', function (Request $request) {
     return $request->user();
