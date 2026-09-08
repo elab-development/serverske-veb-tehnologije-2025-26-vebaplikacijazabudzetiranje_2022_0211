@@ -13,6 +13,6 @@ class SettlementSeeder extends Seeder
      */
     public function run(): void
     {
-        Settlement::factory(10)->create();
+        //Settlement::factory(10)->create();
     }
 }

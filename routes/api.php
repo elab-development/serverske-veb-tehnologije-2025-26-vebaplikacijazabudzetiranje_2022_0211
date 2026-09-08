@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\GroupController;
 use App\Http\Controllers\Api\ExpenseController;
+use App\Http\Controllers\Api\SettlementController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -45,8 +46,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/groups/{group}/members', [GroupController::class, 'addMember']);
     Route::delete('/groups/{group}/members/{user}', [GroupController::class, 'removeMember']);
     Route::get('/groups/{group}/balances', [GroupController::class, 'balances']);
+    Route::get('/groups/{group}/debts', [GroupController::class, 'debts']);
 });
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('expenses', ExpenseController::class);
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/settlements', [SettlementController::class, 'index']);
+    Route::post('/settlements', [SettlementController::class, 'store']);
+    Route::get('/settlements/{settlement}', [SettlementController::class, 'show']);
+    Route::delete('/settlements/{settlement}', [SettlementController::class, 'destroy']);
 });
