@@ -13,10 +13,38 @@ class ExpenseController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $expenses = Expense::with(['group', 'category', 'payer'])
-            ->paginate(10);
+        $query = Expense::with(['group', 'category', 'payer']);
+
+        if ($request->filled('group_id')) {
+            $query->where('group_id', $request->group_id);
+        }
+
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        if ($request->filled('search')) {
+            $query->where('description', 'like', '%' . $request->search . '%');
+        }
+
+        $allowedSorts = ['amount', 'payment_date', 'created_at'];
+
+        $sort = $request->get('sort', 'created_at');
+        $direction = $request->get('direction', 'desc');
+
+        if (!in_array($sort, $allowedSorts)) {
+            $sort = 'created_at';
+        }
+
+        if (!in_array($direction, ['asc', 'desc'])) {
+            $direction = 'desc';
+        }
+
+        $query->orderBy($sort, $direction);
+
+        $expenses = $query->paginate(10);
 
         return ExpenseResource::collection($expenses);
     }

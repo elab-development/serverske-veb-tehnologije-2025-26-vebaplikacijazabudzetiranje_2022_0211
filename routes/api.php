@@ -22,10 +22,10 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
         ]);
     });
 });
-
+/*
 Route::get('/user', function (Request $request) {
     return $request->user();
-})->middleware('auth:sanctum');
+})->middleware('auth:sanctum');*/
 
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{category}', [CategoryController::class, 'show']);
