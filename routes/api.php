@@ -65,6 +65,8 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/expenses/export/csv', [ExpenseController::class, 'exportCsv']);
+
     Route::apiResource('expenses', ExpenseController::class);
 });
 

@@ -214,4 +214,50 @@ class ExpenseController extends Controller
             'message' => 'Trošak je uspešno obrisan.'
         ]);
     }
+
+    public function exportCsv()
+    {
+        $expenses = Expense::with(['group', 'category', 'payer'])->get();
+
+        $fileName = 'expenses_' . now()->format('Y-m-d_H-i-s') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$fileName\"",
+        ];
+
+        $callback = function () use ($expenses) {
+            $file = fopen('php://output', 'w');
+
+            fputcsv($file, [
+                'ID',
+                'Group',
+                'Category',
+                'Payer',
+                'Amount',
+                'Description',
+                'Payment Date'
+            ]);
+
+            foreach ($expenses as $expense) {
+                fputcsv($file, [
+                    $expense->id,
+                    $expense->group?->name,
+                    $expense->category?->name,
+                    $expense->payer?->name,
+                    $expense->amount,
+                    $expense->description,
+                    $expense->payment_date,
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream(
+            $callback,
+            200,
+            $headers
+        );
+    }
 }
