@@ -8,6 +8,7 @@ use App\Models\Expense;
 use Illuminate\Http\Request;
 use \App\Models\Group;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class ExpenseController extends Controller
 {
@@ -72,36 +73,55 @@ class ExpenseController extends Controller
             ], 403);
         }
 
-        $receiptPath = null;
+        $expense = DB::transaction(function () use ($request, $validated, $group) {
 
-        if ($request->hasFile('receipt')) {
-            $receiptPath = $request->file('receipt')->store('receipts', 'public');
-        }
+            $receiptPath = null;
 
-        $expense = Expense::create([
-            'group_id' => $validated['group_id'],
-            'category_id' => $validated['category_id'],
-            'paid_by' => $request->user()->id,
-            'amount' => $validated['amount'],
-            'description' => $validated['description'],
-            'payment_date' => $validated['payment_date'],
-            'receipt_path' => $receiptPath,
-        ]);
+            if ($request->hasFile('receipt')) {
+                $receiptPath = $request
+                    ->file('receipt')
+                    ->store('receipts', 'public');
+            }
 
-        $members = $group->users()->get();
-
-        $shareAmount = round(
-            $expense->amount / $members->count(),
-            2
-        );
-
-        foreach ($members as $member) {
-            $expense->shares()->create([
-                'user_id' => $member->id,
-                'amount_owed' => $shareAmount,
-                'is_paid' => $member->id === $request->user()->id,
+            $expense = Expense::create([
+                'group_id' => $validated['group_id'],
+                'category_id' => $validated['category_id'],
+                'paid_by' => $request->user()->id,
+                'amount' => $validated['amount'],
+                'description' => $validated['description'],
+                'payment_date' => $validated['payment_date'],
+                'receipt_path' => $receiptPath,
             ]);
-        }
+
+            $members = $group->users()->get();
+
+            $memberCount = $members->count();
+
+            $shareAmount = round(
+                $expense->amount / $memberCount,
+                2
+            );
+
+            $remainingAmount = $expense->amount;
+
+            foreach ($members as $index => $member) {
+
+                if ($index === $memberCount - 1) {
+                    $amountOwed = $remainingAmount;
+                } else {
+                    $amountOwed = $shareAmount;
+                    $remainingAmount -= $shareAmount;
+                }
+
+                $expense->shares()->create([
+                    'user_id' => $member->id,
+                    'amount_owed' => $amountOwed,
+                    'is_paid' => $member->id === $request->user()->id,
+                ]);
+            }
+
+            return $expense;
+        });
 
         $expense->load(['group', 'category', 'payer', 'shares']);
 
