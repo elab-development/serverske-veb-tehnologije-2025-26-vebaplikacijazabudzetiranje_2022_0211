@@ -14,10 +14,18 @@ class SettlementController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
+        $query = Settlement::with(['group', 'fromUser', 'toUser']);
+
+        if ($request->user()->role !== 'admin') {
+            $query->whereHas('group.users', function ($q) use ($request) {
+                $q->where('users.id', $request->user()->id);
+            });
+        }
+
         return SettlementResource::collection(
-            Settlement::with(['group', 'fromUser', 'toUser'])->get()
+            $query->get()
         );
     }
 
@@ -97,9 +105,18 @@ class SettlementController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Settlement $settlement)
+    public function show(Request $request, Settlement $settlement)
     {
-        $settlement->load(['group', 'fromUser', 'toUser']);
+        $settlement->load(['group.users', 'fromUser', 'toUser']);
+
+        $isMember = $settlement->group->users
+            ->contains('id', $request->user()->id);
+
+        if (!$isMember && $request->user()->role !== 'admin') {
+            return response()->json([
+                'message' => 'Nemate pristup ovom settlement-u.'
+            ], 403);
+        }
 
         return new SettlementResource($settlement);
     }

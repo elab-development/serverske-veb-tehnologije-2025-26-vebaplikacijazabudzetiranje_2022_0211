@@ -19,6 +19,12 @@ class ExpenseController extends Controller
     {
         $query = Expense::with(['group', 'category', 'payer']);
 
+        if ($request->user()->role !== 'admin') {
+            $query->whereHas('group.users', function ($q) use ($request) {
+                $q->where('users.id', $request->user()->id);
+            });
+        }
+
         if ($request->filled('group_id')) {
             $query->where('group_id', $request->group_id);
         }
@@ -134,9 +140,18 @@ class ExpenseController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Expense $expense)
+    public function show(Request $request, Expense $expense)
     {
-        $expense->load(['group', 'category', 'payer', 'shares']);
+        $expense->load(['group.users', 'category', 'payer', 'shares']);
+
+        $isMember = $expense->group->users
+            ->contains('id', $request->user()->id);
+
+        if (!$isMember && $request->user()->role !== 'admin') {
+            return response()->json([
+                'message' => 'Nemate pristup ovom trošku.'
+            ], 403);
+        }
 
         return new ExpenseResource($expense);
     }
@@ -146,6 +161,16 @@ class ExpenseController extends Controller
      */
     public function update(Request $request, Expense $expense)
     {
+        $isMember = $expense->group->users()
+            ->where('users.id', $request->user()->id)
+            ->exists();
+
+        if (!$isMember && $request->user()->role !== 'admin') {
+            return response()->json([
+                'message' => 'Nemate pristup ovom trošku.'
+            ], 403);
+        }
+
         if (
             $expense->paid_by !== $request->user()->id &&
             $request->user()->role !== 'admin'
@@ -215,6 +240,17 @@ class ExpenseController extends Controller
      */
     public function destroy(Request $request, Expense $expense)
     {
+
+        $isMember = $expense->group->users()
+            ->where('users.id', $request->user()->id)
+            ->exists();
+
+        if (!$isMember && $request->user()->role !== 'admin') {
+            return response()->json([
+                'message' => 'Nemate pristup ovom trošku.'
+            ], 403);
+        }
+
         if (
             $expense->paid_by !== $request->user()->id &&
             $request->user()->role !== 'admin'
