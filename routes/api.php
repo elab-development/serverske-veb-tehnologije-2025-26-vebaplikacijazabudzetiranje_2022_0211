@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\SettlementController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\ExchangeRateController;
 use App\Http\Controllers\Api\HolidayController;
+use App\Http\Controllers\Api\UserController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -36,12 +37,11 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
             'message' => 'Admin pristup je uspešan.'
         ]);
     });
+
+    Route::get('/users', [UserController::class, 'index']);
+    Route::put('/users/{user}/role', [UserController::class, 'updateRole']);
 });
 
-/*
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');*/
 
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{category}', [CategoryController::class, 'show']);

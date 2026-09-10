@@ -13,9 +13,17 @@ class GroupController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        return GroupResource::collection(Group::with(['creator', 'users'])->get());
+        $query = Group::with(['creator', 'users']);
+
+        if ($request->user()->role !== 'admin') {
+            $query->whereHas('users', function ($q) use ($request) {
+                $q->where('users.id', $request->user()->id);
+            });
+        }
+
+        return GroupResource::collection($query->get());
     }
 
     /**
@@ -45,8 +53,18 @@ class GroupController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Group $group)
+    public function show(Request $request, Group $group)
     {
+        $isMember = $group->users()
+            ->where('users.id', $request->user()->id)
+            ->exists();
+
+        if (!$isMember && $request->user()->role !== 'admin') {
+            return response()->json([
+                'message' => 'Nemate pristup ovoj grupi.'
+            ], 403);
+        }
+
         $group->load(['creator', 'users']);
 
         return new GroupResource($group);
@@ -100,8 +118,18 @@ class GroupController extends Controller
         ]);
     }
 
-    public function members(Group $group)
+    public function members(Request $request, Group $group)
     {
+        $isMember = $group->users()
+            ->where('users.id', $request->user()->id)
+            ->exists();
+
+        if (!$isMember && $request->user()->role !== 'admin') {
+            return response()->json([
+                'message' => 'Nemate pristup ovoj grupi.'
+            ], 403);
+        }
+
         $group->load('users');
 
         return response()->json([
