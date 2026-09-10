@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\SettlementController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\ExchangeRateController;
+use App\Http\Controllers\Api\HolidayController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -82,3 +83,5 @@ Route::get('/exchange-rate', [ExchangeRateController::class, 'getRate']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/expenses/{expense}/convert', [ExchangeRateController::class, 'convertExpense']);
 });
+
+Route::get('/holidays', [HolidayController::class, 'index']);
