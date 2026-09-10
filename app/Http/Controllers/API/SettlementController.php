@@ -50,6 +50,107 @@ class SettlementController extends Controller
                 'message' => 'Ne možete izvršiti settlement prema samom sebi.'
             ], 422);
         }
+        $group->load([
+            'users',
+            'expenses.shares',
+            'settlements'
+        ]);
+
+
+        $balances = [];
+
+        foreach ($group->users as $user) {
+
+            $paid = $group->expenses
+                ->where('paid_by', $user->id)
+                ->sum('amount');
+
+            $owed = 0;
+
+            foreach ($group->expenses as $expense) {
+                $share = $expense->shares
+                    ->where('user_id', $user->id)
+                    ->first();
+
+                if ($share) {
+                    $owed += $share->amount_owed;
+                }
+            }
+
+            $sentSettlements = $group->settlements
+                ->where('from_user_id', $user->id)
+                ->sum('amount');
+
+            $receivedSettlements = $group->settlements
+                ->where('to_user_id', $user->id)
+                ->sum('amount');
+
+            $balances[$user->id] = round(
+                $paid - $owed + $sentSettlements - $receivedSettlements,
+                2
+            );
+        }
+
+        $debtors = [];
+        $creditors = [];
+
+        foreach ($balances as $userId => $balance) {
+
+            if ($balance < 0) {
+                $debtors[$userId] = abs($balance);
+            }
+
+            if ($balance > 0) {
+                $creditors[$userId] = $balance;
+            }
+        }
+
+        $debts = [];
+
+        foreach ($debtors as $debtorId => $debtAmount) {
+
+            foreach ($creditors as $creditorId => $creditAmount) {
+
+                if ($debtAmount <= 0) {
+                    break;
+                }
+
+                if ($creditAmount <= 0) {
+                    continue;
+                }
+
+                $amount = min($debtAmount, $creditAmount);
+
+                $debts[] = [
+                    'from_user_id' => $debtorId,
+                    'to_user_id' => $creditorId,
+                    'amount' => round($amount, 2),
+                ];
+
+                $debtAmount -= $amount;
+                $creditors[$creditorId] -= $amount;
+            }
+        }
+
+        $currentDebt = collect($debts)->first(function ($debt) use ($request, $validated) {
+            return
+                $debt['from_user_id'] === $request->user()->id &&
+                $debt['to_user_id'] === (int) $validated['to_user_id'];
+        });
+
+        if (!$currentDebt) {
+            return response()->json([
+                'message' => 'Nemate dug prema ovom korisniku.'
+            ], 422);
+        }
+
+        if ($validated['amount'] > $currentDebt['amount']) {
+            return response()->json([
+                'message' => 'Iznos settlement-a je veći od trenutnog duga.',
+                'current_debt' => $currentDebt['amount'],
+            ], 422);
+        }
+
 
         $settlement = Settlement::create([
             'group_id' => $validated['group_id'],
