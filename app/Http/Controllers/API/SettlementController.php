@@ -7,6 +7,7 @@ use App\Http\Resources\SettlementResource;
 use App\Models\Group;
 use App\Models\Settlement;
 use Illuminate\Http\Request;
+use App\Services\DebtService;
 
 class SettlementController extends Controller
 {
@@ -23,7 +24,7 @@ class SettlementController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(Request $request, DebtService $debtService)
     {
         $validated = $request->validate([
             'group_id' => 'required|exists:groups,id',
@@ -57,80 +58,7 @@ class SettlementController extends Controller
         ]);
 
 
-        $balances = [];
-
-        foreach ($group->users as $user) {
-
-            $paid = $group->expenses
-                ->where('paid_by', $user->id)
-                ->sum('amount');
-
-            $owed = 0;
-
-            foreach ($group->expenses as $expense) {
-                $share = $expense->shares
-                    ->where('user_id', $user->id)
-                    ->first();
-
-                if ($share) {
-                    $owed += $share->amount_owed;
-                }
-            }
-
-            $sentSettlements = $group->settlements
-                ->where('from_user_id', $user->id)
-                ->sum('amount');
-
-            $receivedSettlements = $group->settlements
-                ->where('to_user_id', $user->id)
-                ->sum('amount');
-
-            $balances[$user->id] = round(
-                $paid - $owed + $sentSettlements - $receivedSettlements,
-                2
-            );
-        }
-
-        $debtors = [];
-        $creditors = [];
-
-        foreach ($balances as $userId => $balance) {
-
-            if ($balance < 0) {
-                $debtors[$userId] = abs($balance);
-            }
-
-            if ($balance > 0) {
-                $creditors[$userId] = $balance;
-            }
-        }
-
-        $debts = [];
-
-        foreach ($debtors as $debtorId => $debtAmount) {
-
-            foreach ($creditors as $creditorId => $creditAmount) {
-
-                if ($debtAmount <= 0) {
-                    break;
-                }
-
-                if ($creditAmount <= 0) {
-                    continue;
-                }
-
-                $amount = min($debtAmount, $creditAmount);
-
-                $debts[] = [
-                    'from_user_id' => $debtorId,
-                    'to_user_id' => $creditorId,
-                    'amount' => round($amount, 2),
-                ];
-
-                $debtAmount -= $amount;
-                $creditors[$creditorId] -= $amount;
-            }
-        }
+        $debts = $debtService->calculateDebts($group);
 
         $currentDebt = collect($debts)->first(function ($debt) use ($request, $validated) {
             return

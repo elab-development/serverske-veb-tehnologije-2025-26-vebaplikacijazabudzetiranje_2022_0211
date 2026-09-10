@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\GroupResource;
 use App\Models\Group;
 use Illuminate\Http\Request;
+use App\Services\DebtService;
 
 class GroupController extends Controller
 {
@@ -168,148 +169,19 @@ class GroupController extends Controller
         ]);
     }
 
-    public function balances(Group $group)
+    public function balances(Group $group, DebtService $debtService)
     {
-        $group->load([
-            'users',
-            'expenses.shares',
-            'settlements',
-        ]);
-
-        $balances = [];
-
-        foreach ($group->users as $user) {
-            $paid = $group->expenses
-                ->where('paid_by', $user->id)
-                ->sum('amount');
-
-            $owed = 0;
-
-            foreach ($group->expenses as $expense) {
-                $share = $expense->shares
-                    ->firstWhere('user_id', $user->id);
-
-                if ($share) {
-                    $owed += $share->amount_owed;
-                }
-            }
-
-
-            $sentSettlements = $group->settlements
-                ->where('from_user_id', $user->id)
-                ->sum('amount');
-
-            $receivedSettlements = $group->settlements
-                ->where('to_user_id', $user->id)
-                ->sum('amount');
-
-            $balance = round(
-                $paid - $owed + $sentSettlements - $receivedSettlements,
-                2
-            );
-
-            $balances[] = [
-                'user_id' => $user->id,
-                'name' => $user->name,
-                'paid' => round($paid, 2),
-                'owed' => round($owed, 2),
-                'balance' => $balance,
-                'status' => $balance > 0
-                    ? 'potražuje'
-                    : ($balance < 0 ? 'duguje' : 'izmiren'),
-            ];
-        }
-
         return response()->json([
             'group_id' => $group->id,
-            'group_name' => $group->name,
-            'balances' => $balances,
+            'balances' => $debtService->calculateBalances($group),
         ]);
     }
 
-    public function debts(Group $group)
+    public function debts(Group $group, DebtService $debtService)
     {
-        $group->load([
-            'users',
-            'expenses.shares',
-            'settlements',
-        ]);
-
-        $balances = [];
-
-        foreach ($group->users as $user) {
-            $paid = $group->expenses
-                ->where('paid_by', $user->id)
-                ->sum('amount');
-
-            $owed = 0;
-
-            foreach ($group->expenses as $expense) {
-                $share = $expense->shares
-                    ->firstWhere('user_id', $user->id);
-
-                if ($share) {
-                    $owed += $share->amount_owed;
-                }
-            }
-
-            $sentSettlements = $group->settlements
-                ->where('from_user_id', $user->id)
-                ->sum('amount');
-
-            $receivedSettlements = $group->settlements
-                ->where('to_user_id', $user->id)
-                ->sum('amount');
-
-            $balances[$user->id] = round(
-                $paid - $owed + $sentSettlements - $receivedSettlements,
-                2
-            );
-        }
-
-        $debtors = [];
-        $creditors = [];
-
-        foreach ($balances as $userId => $balance) {
-            if ($balance < 0) {
-                $debtors[$userId] = abs($balance);
-            }
-
-            if ($balance > 0) {
-                $creditors[$userId] = $balance;
-            }
-        }
-
-        $debts = [];
-
-        foreach ($debtors as $debtorId => $debtAmount) {
-            foreach ($creditors as $creditorId => $creditAmount) {
-
-                if ($debtAmount <= 0) {
-                    break;
-                }
-
-                if ($creditAmount <= 0) {
-                    continue;
-                }
-
-                $amount = min($debtAmount, $creditAmount);
-
-                $debts[] = [
-                    'from_user_id' => $debtorId,
-                    'to_user_id' => $creditorId,
-                    'amount' => round($amount, 2),
-                ];
-
-                $debtAmount -= $amount;
-                $creditors[$creditorId] -= $amount;
-            }
-        }
-
         return response()->json([
             'group_id' => $group->id,
-            'group_name' => $group->name,
-            'debts' => $debts,
+            'debts' => $debtService->calculateDebts($group),
         ]);
     }
 }
